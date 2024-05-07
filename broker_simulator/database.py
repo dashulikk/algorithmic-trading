@@ -75,8 +75,14 @@ class Database:
         self.conn.commit()
 
     def delete_user(self, username: str) -> None:
-        delete_query = "DELETE FROM users WHERE username = %s;"
-        self.cursor.execute(delete_query, (username,))
+        delete_from_users_query = "DELETE FROM users WHERE username = %s;"
+        delete_from_balance_query = "DELETE FROM users_balance WHERE username = %s;"
+        delete_from_stocks_query = "DELETE FROM users_stocks WHERE username = %s;"
+
+        self.cursor.execute(delete_from_users_query, (username,))
+        self.cursor.execute(delete_from_balance_query, (username,))
+        self.cursor.execute(delete_from_stocks_query, (username,))
+
 
         self.conn.commit()
 
@@ -111,6 +117,10 @@ class Database:
 
         return stocks
 
+    @staticmethod
+    def _calculate_fee(total: float) -> float:
+        return total * 0.001  # 0.1% of the total
+
     def buy_stock(self, username: str, stock: str, amount: float) -> bool:
         if not self.user_exists(username) or amount <= 0:
             return False
@@ -119,9 +129,11 @@ class Database:
 
         total = stock_price * amount
 
+        fee = self._calculate_fee(total)
+
         try:
-            query_balance_subtract = "UPDATE users_balance SET balance = balance - %s WHERE username = %s;"
-            self.cursor.execute(query_balance_subtract, (total, username))
+            query_balance_subtract = "UPDATE users_balance SET balance = balance - (%s + %s) WHERE username = %s;"
+            self.cursor.execute(query_balance_subtract, (total, fee, username))
 
             user_stocks = self.get_stocks_by_user(username)
             if stock not in user_stocks:
@@ -136,6 +148,7 @@ class Database:
             return True
         except Exception as e:
             self.conn.rollback()
+            print(e)
             return False
 
     def sell_stock(self, username: str, stock: str, amount: float) -> bool:
@@ -150,10 +163,14 @@ class Database:
         stock_price = get_stock_price(stock)
 
         total = stock_price * amount
+        fee = self._calculate_fee(total)
+
+        if total < 0:
+            return False
 
         try:
-            query_balance_subtract = "UPDATE users_balance SET balance = balance + %s WHERE username = %s;"
-            self.cursor.execute(query_balance_subtract, (total, username))
+            query_balance_subtract = "UPDATE users_balance SET balance = balance + (%s - %s) WHERE username = %s;"
+            self.cursor.execute(query_balance_subtract, (total, fee, username))
 
             query_stock_buy = "UPDATE users_stocks SET amount = amount - %s WHERE username = %s AND stock = %s;"
             self.cursor.execute(query_stock_buy, (amount, username, stock))
@@ -166,6 +183,7 @@ class Database:
             return True
         except Exception:
             self.conn.rollback()
+            print(e)
             return False
 
     def __del__(self):
