@@ -55,7 +55,10 @@ class Database:
 
         return exists
 
-    def get_user_password_and_salt(self, username: str) -> Tuple[str, str]:
+    def get_user_password_and_salt(self, username: str) -> Tuple[str, str] | None:
+        if not self.user_exists(username):
+            return None
+
         # Prepare the SQL query using parameterized statements for safety
         query = "SELECT password_hash, salt FROM users WHERE username = %s;"
 
@@ -75,6 +78,9 @@ class Database:
         self.conn.commit()
 
     def delete_user(self, username: str) -> None:
+        if not self.user_exists(username):
+            return None
+
         delete_from_users_query = "DELETE FROM users WHERE username = %s;"
         delete_from_balance_query = "DELETE FROM users_balance WHERE username = %s;"
         delete_from_stocks_query = "DELETE FROM users_stocks WHERE username = %s;"
@@ -83,10 +89,12 @@ class Database:
         self.cursor.execute(delete_from_balance_query, (username,))
         self.cursor.execute(delete_from_stocks_query, (username,))
 
-
         self.conn.commit()
 
-    def get_balance(self, username: str) -> float:
+    def get_balance(self, username: str) -> float | None:
+        if not self.user_exists(username):
+            return None
+
         query = "SELECT balance FROM users_balance WHERE username = %s;"
 
         # Execute the query with the username parameter
@@ -98,6 +106,9 @@ class Database:
         return query_result[0][0]
 
     def topup(self, username: str, amount: float) -> None:
+        if not self.user_exists(username):
+            return None
+
         balance = self.get_balance(username)
         query = "UPDATE users_balance SET balance = %s WHERE username = %s;"
 
@@ -105,7 +116,10 @@ class Database:
 
         self.conn.commit()
 
-    def get_stocks_by_user(self, username: str) -> Dict[str, float]:
+    def get_stocks_by_user(self, username: str) -> Dict[str, float] | None:
+        if not self.user_exists(username):
+            return None
+
         stocks: Dict[str, float] = {}
 
         query = "SELECT stock, amount FROM users_stocks WHERE username = %s;"
@@ -121,7 +135,7 @@ class Database:
     def _calculate_fee(total: float) -> float:
         return total * 0.001  # 0.1% of the total
 
-    def buy_stock(self, username: str, stock: str, amount: float) -> bool:
+    def buy_stock(self, username: str, stock: str, amount: float) -> bool | None:
         if not self.user_exists(username) or amount <= 0:
             return False
 
@@ -181,7 +195,7 @@ class Database:
             self.conn.commit()
 
             return True
-        except Exception:
+        except Exception as e:
             self.conn.rollback()
             print(e)
             return False
