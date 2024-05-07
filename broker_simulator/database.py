@@ -1,11 +1,8 @@
 import os
 import sys
-from typing import Tuple, Dict
 
 import psycopg2
 from dotenv import load_dotenv
-
-from stock_info import get_stock_price
 
 load_dotenv()  # load .env variables
 
@@ -30,18 +27,20 @@ class Database:
                                                           port=port)
 
         self.cursor: postgres_cursor = self.conn.cursor()
+        self._execute_prepared_statements()
+
+    def _execute_prepared_statements(self):
+        self.cursor.execute("""
+                                            PREPARE insert_user_plan AS 
+                                            INSERT INTO users (username, password_hash, salt) 
+                                            VALUES ($1, $2, $3);
+                                        """)
 
         self.cursor.execute("""
-                                    PREPARE insert_user_plan AS 
-                                    INSERT INTO users (username, password_hash, salt) 
-                                    VALUES ($1, $2, $3);
-                                """)
-
-        self.cursor.execute("""
-                                    PREPARE insert_user_balance_plan AS 
-                                    INSERT INTO users_balance (username, balance) 
-                                    VALUES ($1, 0);
-                                """)
+                                            PREPARE insert_user_balance_plan AS 
+                                            INSERT INTO users_balance (username, balance) 
+                                            VALUES ($1, 0);
+                                        """)
 
     def user_exists(self, username: str) -> bool:
         # Prepare the SQL query using parameterized statements for safety
@@ -55,7 +54,7 @@ class Database:
 
         return exists
 
-    def get_user_password_and_salt(self, username: str) -> Tuple[str, str] | None:
+    def get_user_password_and_salt(self, username: str) -> tuple[str, str] | None:
         if not self.user_exists(username):
             return None
 
@@ -68,7 +67,7 @@ class Database:
         # Fetch the result
         query_result = self.cursor.fetchall()
 
-        return query_result[0][0], query_result[0][1]
+        return query_result
 
     def create_user(self, username: str, hashed_password_hex: str, salt_hex: str) -> None:
         # Execute the prepared statement with provided parameters
@@ -91,7 +90,7 @@ class Database:
 
         self.conn.commit()
 
-    def get_balance(self, username: str) -> float | None:
+    def get_balance(self, username: str) -> list[tuple[any, any]] | None:
         if not self.user_exists(username):
             return None
 
@@ -103,24 +102,24 @@ class Database:
         # Fetch the result
         query_result = self.cursor.fetchall()
 
-        return query_result[0][0]
+        return query_result
 
     def topup(self, username: str, amount: float) -> None:
         if not self.user_exists(username):
             return None
 
         balance = self.get_balance(username)
-        query = "UPDATE users_balance SET balance = %s WHERE username = %s;"
+        query = "UPDATE users_balance SET balance = balance + %s WHERE username = %s;"
 
-        self.cursor.execute(query, (balance + amount, username))
+        self.cursor.execute(query, (amount, username))
 
         self.conn.commit()
 
-    def get_stocks_by_user(self, username: str) -> Dict[str, float] | None:
+    def get_stocks_by_user(self, username: str) -> dict[str, float] | None:
         if not self.user_exists(username):
             return None
 
-        stocks: Dict[str, float] = {}
+        stocks: dict[str, float] = {}
 
         query = "SELECT stock, amount FROM users_stocks WHERE username = %s;"
         self.cursor.execute(query, (username,))
@@ -131,19 +130,9 @@ class Database:
 
         return stocks
 
-    @staticmethod
-    def _calculate_fee(total: float) -> float:
-        return total * 0.001  # 0.1% of the total
-
-    def buy_stock(self, username: str, stock: str, amount: float) -> bool | None:
-        if not self.user_exists(username) or amount <= 0:
+    def buy_stock(self, username: str, stock: str, amount: float, total: float, fee: float) -> bool | None:
+        if not self.user_exists(username):
             return False
-
-        stock_price = get_stock_price(stock)
-
-        total = stock_price * amount
-
-        fee = self._calculate_fee(total)
 
         try:
             query_balance_subtract = "UPDATE users_balance SET balance = balance - (%s + %s) WHERE username = %s;"
@@ -162,24 +151,15 @@ class Database:
             return True
         except Exception as e:
             self.conn.rollback()
-            print(e)
             return False
 
-    def sell_stock(self, username: str, stock: str, amount: float) -> bool:
-        if not self.user_exists(username) or amount <= 0:
+    def sell_stock(self, username: str, stock: str, amount: float, total: float, fee: float) -> bool:
+        if not self.user_exists(username):
             return False
 
         user_stocks = self.get_stocks_by_user(username)
 
         if stock not in user_stocks:
-            return False
-
-        stock_price = get_stock_price(stock)
-
-        total = stock_price * amount
-        fee = self._calculate_fee(total)
-
-        if total < 0:
             return False
 
         try:
