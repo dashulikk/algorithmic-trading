@@ -1,0 +1,23 @@
+### users_stocks ###
+username VARCHAR(255) NOT NULL,
+stock VARCHAR(255) NOT NULL,
+amount FLOAT
+
+### users_balance ###
+username VARCHAR(255) NOT NULL PRIMARY KEY,
+balance FLOAT
+
+### users ###
+username VARCHAR(255) NOT NULL PRIMARY KEY,
+password_hash VARCHAR(255) NOT NULL,
+salt VARCHAR(255) NOT NULL
+
+### users_orders ###
+id SERIAL PRIMARY KEY,
+username VARCHAR(255) NOT NULL,
+stock VARCHAR(255) NOT NULL,
+order_type VARCHAR(10) CHECK (order_type IN ('stop_loss', 'limit')),
+trigger_price FLOAT,
+amount FLOAT
+
+
