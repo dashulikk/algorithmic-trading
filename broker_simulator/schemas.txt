@@ -16,7 +16,7 @@ salt VARCHAR(255) NOT NULL
 id SERIAL PRIMARY KEY,
 username VARCHAR(255) NOT NULL,
 stock VARCHAR(255) NOT NULL,
-order_type VARCHAR(10) CHECK (order_type IN ('stop_loss', 'limit')),
+order_type VARCHAR(20) CHECK (order_type IN ('stop_loss', 'limit', 'take_profit')),
 trigger_price FLOAT,
 amount FLOAT
 
