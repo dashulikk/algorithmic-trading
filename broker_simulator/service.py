@@ -1,5 +1,5 @@
 from stock_info import get_stock_price
-from broker_simulator.database import Database
+from database import Database
 
 
 # TODO: Raise Exceptions instead of just returning None
