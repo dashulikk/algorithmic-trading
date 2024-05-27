@@ -178,3 +178,11 @@ async def submit_order(submit_order_request: SubmitOrderRequest, token: str = De
         return {"Order submitted successfully"}
     except Exception as e:
         raise HTTPException(status_code=403, detail=f"Exception: {e}")
+
+
+@app.get("/get_order_book", status_code=200)
+async def submit_order():
+    try:
+        return {"order_book": service.get_order_book()}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")

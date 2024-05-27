@@ -1,3 +1,4 @@
+from data_models import Order
 from custom_exceptions import ServiceException
 from stock_info import get_stock_price
 from database import Database
@@ -76,6 +77,6 @@ class Service:
     def submit_order(self, username: str, order_type: str, stock: str, amount: float, trigger_price: float):
         self.db.submit_order(username, order_type, stock, amount, trigger_price)
 
-        print(self.db.get_all_orders())
-
+    def get_order_book(self) -> list[Order]:
+        return self.db.get_all_orders()
 
