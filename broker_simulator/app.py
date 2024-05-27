@@ -125,7 +125,7 @@ async def buy_stock(buy_stock_request: BuyStockRequest, token: str = Depends(oau
 
 
 @app.put("/sell", status_code=200)
-async def buy_stock(sell_stock_request: SellStockRequest, token: str = Depends(oauth2_scheme)):
+async def sell_stock(sell_stock_request: SellStockRequest, token: str = Depends(oauth2_scheme)):
     username: str = get_current_user(token)
     if username is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -181,7 +181,7 @@ async def submit_order(submit_order_request: SubmitOrderRequest, token: str = De
 
 
 @app.get("/get_order_book", status_code=200)
-async def submit_order():
+async def get_order_book():
     try:
         return {"order_book": service.get_order_book()}
     except Exception as e:
