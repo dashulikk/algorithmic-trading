@@ -30,7 +30,7 @@ class Service:
 
         self.db.topup(username, amount)
 
-    def get_stocks_by_user(self, username: str) -> dict[str, float] | None:
+    def get_portfolio(self, username: str) -> dict[str, float]:
         return self.db.get_portfolio(username)
 
     @staticmethod
