@@ -31,7 +31,7 @@ class Service:
         self.db.topup(username, amount)
 
     def get_stocks_by_user(self, username: str) -> dict[str, float] | None:
-        return self.db.get_stocks_by_user(username)
+        return self.db.get_portfolio(username)
 
     @staticmethod
     def _calculate_fee(total: float) -> float:
@@ -58,3 +58,8 @@ class Service:
 
         fee = self._calculate_fee(total)
         self.db.sell_stock(username, stock, amount, total, fee)
+
+    def submit_order(self, username: str, order_type: str, stock: str, amount: float, trigger_price: str):
+        self.db.submit_order(username, order_type, stock, amount, trigger_price)
+
+        print(self.db.get_all_orders())

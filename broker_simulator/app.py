@@ -1,11 +1,13 @@
+# TODO: return errors
+
 import os
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from pydantic import BaseModel
 
+from data_models import UserCreate, UserLogin, BuyStockRequest, SellStockRequest, TopUpRequest
 from database import Database
 from salted_password import SaltedPassword
 from service import Service
@@ -42,17 +44,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
 
-# Pydantic models for request bodies
-class UserCreate(BaseModel):
-    username: str
-    password: str
-
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
-
 @app.post("/create_user", status_code=200)
 async def create_user(user: UserCreate):
     if not service.user_exists(user.username):
@@ -83,9 +74,37 @@ async def login(user: UserLogin):
     raise HTTPException(status_code=401, detail="Bad username or password")
 
 
-@app.get("/test_access", status_code=200)
-async def test_access(token: str = Depends(oauth2_scheme)):
+@app.get("/get_balance", status_code=200)
+async def get_balance(token: str = Depends(oauth2_scheme)):
     username: str = get_current_user(token)
     if username is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    return {"message": "Access granted"}
+
+    return {"balance": f"{service.get_balance(username)}"}
+
+
+@app.put("/topup", status_code=200)
+async def topup(topup_request: TopUpRequest, token: str = Depends(oauth2_scheme)):
+    username: str = get_current_user(token)
+    if username is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    service.topup(username, topup_request.amount)
+
+
+@app.put("/buy", status_code=200)
+async def buy_stock(buy_stock_request: BuyStockRequest, token: str = Depends(oauth2_scheme)):
+    username: str = get_current_user(token)
+    if username is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    service.buy_stock(username, buy_stock_request.stock, buy_stock_request.amount)
+
+
+@app.put("/sell", status_code=200)
+async def buy_stock(sell_stock_request: SellStockRequest, token: str = Depends(oauth2_scheme)):
+    username: str = get_current_user(token)
+    if username is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    service.sell_stock(username, sell_stock_request.stock, sell_stock_request.amount)

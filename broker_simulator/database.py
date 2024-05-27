@@ -4,6 +4,8 @@ import sys
 import psycopg2
 from dotenv import load_dotenv
 
+from data_models import Order
+
 load_dotenv()  # load .env variables
 
 postgres_connection = psycopg2.extensions.connection
@@ -115,7 +117,7 @@ class Database:
 
         self.conn.commit()
 
-    def get_stocks_by_user(self, username: str) -> dict[str, float] | None:
+    def get_portfolio(self, username: str) -> dict[str, float] | None:
         if not self.user_exists(username):
             return None
 
@@ -138,7 +140,7 @@ class Database:
             query_balance_subtract = "UPDATE users_balance SET balance = balance - (%s + %s) WHERE username = %s;"
             self.cursor.execute(query_balance_subtract, (total, fee, username))
 
-            user_stocks = self.get_stocks_by_user(username)
+            user_stocks = self.get_portfolio(username)
             if stock not in user_stocks:
                 query_create_stock_entry = "INSERT INTO users_stocks VALUES (%s, %s, %s);"
                 self.cursor.execute(query_create_stock_entry, (username, stock, 0))
@@ -157,7 +159,7 @@ class Database:
         if not self.user_exists(username):
             return False
 
-        user_stocks = self.get_stocks_by_user(username)
+        user_stocks = self.get_portfolio(username)
 
         if stock not in user_stocks:
             return False
@@ -179,6 +181,40 @@ class Database:
             self.conn.rollback()
             print(e)
             return False
+
+    def submit_order(self, username: str, order_type: str, stock: str, amount: float, trigger_price: str):
+        if not self.user_exists(username):
+            return False
+
+        try:
+            query_create_stock_entry = "INSERT INTO users_orders VALUES (%s, %s, %s, %s, %s);"
+            self.cursor.execute(query_create_stock_entry, (username, stock, order_type, trigger_price, amount))
+            self.conn.commit()
+
+            return True
+        except Exception as e:
+            self.conn.rollback()
+            return False
+
+    def get_all_orders(self) -> list[Order] | None:
+        try:
+            # Preparing the SQL query to select all rows from the users_orders table
+            query = "SELECT * FROM users_orders;"
+
+            # Executing the query
+            self.cursor.execute(query)
+
+            # Fetching the results
+            orders_data = self.cursor.fetchall()
+
+            # Creating a list of Order instances
+            orders = [Order(id=order[0], username=order[1], stock=order[2], order_type=order[3], trigger_price=order[4],
+                            amount=order[5]) for order in orders_data]
+
+            return orders
+        except Exception as e:
+            print(f"An error occurred while fetching orders: {e}")
+            return None
 
     def __del__(self):
         self.cursor.close()
