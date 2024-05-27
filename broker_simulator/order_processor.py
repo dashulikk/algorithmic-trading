@@ -1,13 +1,12 @@
 import time
 
-from database import Database
-from service import Service
+from broker_simulator.database import Database
+from broker_simulator.service import Service
 
 db = Database()
 service = Service(db)
 
 FREQUENCY = 100
-
 
 def process_orders():
     try:

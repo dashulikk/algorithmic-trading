@@ -1,5 +1,5 @@
-nohup python3 order_processor.py > /dev/null 2>&1 &
-nohup uvicorn app:app --reload --port 5000 > /dev/null 2>&1 &
+nohup python3 -m broker_simulator.order_processor.py > /dev/null 2>&1 &
+nohup uvicorn broker_simulator.app:app --reload --port 5000 > /dev/null 2>&1 &
 
 # this returns process id of first process (order processor) -> pid1
 # and second process (app.py) -> pid2

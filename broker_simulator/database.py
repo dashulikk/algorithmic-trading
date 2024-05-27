@@ -4,8 +4,8 @@ import sys
 import psycopg2
 from dotenv import load_dotenv
 
-from custom_exceptions import DBException
-from data_models import Order
+from broker_simulator.custom_exceptions import DBException
+from broker_simulator.data_models import Order
 
 load_dotenv()  # load .env variables
 

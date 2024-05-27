@@ -5,11 +5,11 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
-from data_models import UserCreate, UserLogin, BuyStockRequest, SellStockRequest, TopUpRequest, StockPriceRequest, \
+from broker_simulator.data_models import UserCreate, UserLogin, BuyStockRequest, SellStockRequest, TopUpRequest, StockPriceRequest, \
     SubmitOrderRequest
-from database import Database
-from salted_password import SaltedPassword
-from service import Service
+from broker_simulator.database import Database
+from broker_simulator.salted_password import SaltedPassword
+from broker_simulator.service import Service
 
 load_dotenv()
 

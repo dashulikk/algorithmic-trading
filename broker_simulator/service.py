@@ -1,7 +1,7 @@
-from data_models import Order
-from custom_exceptions import ServiceException
-from stock_info import get_stock_price
-from database import Database
+from broker_simulator.data_models import Order
+from broker_simulator.custom_exceptions import ServiceException
+from broker_simulator.stock_info import get_stock_price
+from broker_simulator.database import Database
 
 
 class Service:
