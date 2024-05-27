@@ -73,7 +73,9 @@ class Service:
 
         return net_worth
 
-    def submit_order(self, username: str, order_type: str, stock: str, amount: float, trigger_price: str):
+    def submit_order(self, username: str, order_type: str, stock: str, amount: float, trigger_price: float):
         self.db.submit_order(username, order_type, stock, amount, trigger_price)
 
         print(self.db.get_all_orders())
+
+

@@ -36,3 +36,10 @@ class TopUpRequest(BaseModel):
 
 class StockPriceRequest(BaseModel):
     stock: str
+
+
+class SubmitOrderRequest(BaseModel):
+    order_type: str
+    stock: str
+    amount: float
+    trigger_price: float

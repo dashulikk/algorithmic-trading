@@ -145,7 +145,7 @@ class Database:
 
         return stocks
 
-    def buy_stock(self, username: str, stock: str, amount: float, total: float, fee: float) -> None:
+    def buy_stock(self, username: str, stock: str, amount: float, total: float, fee: float, commit=True) -> None:
         if not self.user_exists(username):
             raise DBException("This user doesn't exist")
 
@@ -161,13 +161,15 @@ class Database:
             query_stock_buy = "UPDATE users_stocks SET amount = amount + %s WHERE username = %s AND stock = %s;"
             self.cursor.execute(query_stock_buy, (amount, username, stock))
 
-            self.conn.commit()
+            if commit:
+                self.conn.commit()
         except Exception as e:
-            self.conn.rollback()
+            if commit:
+                self.conn.rollback()
 
             raise DBException(f"Operation failed: {e}")
 
-    def sell_stock(self, username: str, stock: str, amount: float, total: float, fee: float) -> None:
+    def sell_stock(self, username: str, stock: str, amount: float, total: float, fee: float, commit=True) -> None:
         if not self.user_exists(username):
             raise DBException("This user doesn't exist")
 
@@ -186,21 +188,34 @@ class Database:
             query_remove_stock_if_zero = "DELETE FROM users_stocks WHERE username = %s AND stock = %s AND amount = 0;"
             self.cursor.execute(query_remove_stock_if_zero, (username, stock))
 
+            if commit:
+                self.conn.commit()
+        except Exception as e:
+            if commit:
+                self.conn.rollback()
+            raise DBException(f"Operation failed: {e}")
+
+    def submit_order(self, username: str, order_type: str, stock: str, amount: float, trigger_price: float):
+        if not self.user_exists(username):
+            raise DBException("This user doesn't exist")
+
+        try:
+            query_create_stock_entry = "INSERT INTO users_orders VALUES (DEFAULT, %s, %s, %s, %s, %s);"
+            self.cursor.execute(query_create_stock_entry, (username, stock, order_type, trigger_price, amount))
             self.conn.commit()
         except Exception as e:
             self.conn.rollback()
             raise DBException(f"Operation failed: {e}")
 
-    def submit_order(self, username: str, order_type: str, stock: str, amount: float, trigger_price: str):
-        if not self.user_exists(username):
-            raise DBException("This user doesn't exist")
-
+    def delete_order(self, order_id: int, commit=True):
         try:
-            query_create_stock_entry = "INSERT INTO users_orders VALUES (%s, %s, %s, %s, %s);"
-            self.cursor.execute(query_create_stock_entry, (username, stock, order_type, trigger_price, amount))
-            self.conn.commit()
+            query_delete_order = "DELETE FROM users_orders WHERE id = %s;"
+            self.cursor.execute(query_delete_order, (order_id,))
+            if commit:
+                self.conn.commit()
         except Exception as e:
-            self.conn.rollback()
+            if commit:
+                self.conn.rollback()
             raise DBException(f"Operation failed: {e}")
 
     def get_all_orders(self) -> list[Order]:

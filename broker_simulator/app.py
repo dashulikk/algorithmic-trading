@@ -5,7 +5,8 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
-from data_models import UserCreate, UserLogin, BuyStockRequest, SellStockRequest, TopUpRequest, StockPriceRequest
+from data_models import UserCreate, UserLogin, BuyStockRequest, SellStockRequest, TopUpRequest, StockPriceRequest, \
+    SubmitOrderRequest
 from database import Database
 from salted_password import SaltedPassword
 from service import Service
@@ -158,5 +159,22 @@ async def get_net_worth(token: str = Depends(oauth2_scheme)):
     try:
         net_worth = service.get_net_worth(username)
         return {"net_worth": f"{net_worth}"}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
+
+
+@app.put("/submit_order", status_code=200)
+async def submit_order(submit_order_request: SubmitOrderRequest, token: str = Depends(oauth2_scheme)):
+    username: str = get_current_user(token)
+    if username is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    try:
+        service.submit_order(username, submit_order_request.order_type,
+                             submit_order_request.stock,
+                             submit_order_request.amount,
+                             submit_order_request.trigger_price)
+
+        return {"Order submitted successfully"}
     except Exception as e:
         raise HTTPException(status_code=403, detail=f"Exception: {e}")
