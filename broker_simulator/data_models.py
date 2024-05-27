@@ -32,3 +32,7 @@ class SellStockRequest(BaseModel):
 
 class TopUpRequest(BaseModel):
     amount: float
+
+
+class StockPriceRequest(BaseModel):
+    stock: str

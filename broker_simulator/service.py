@@ -37,11 +37,15 @@ class Service:
     def _calculate_fee(total: float) -> float:
         return total * 0.001  # 0.1% of the total
 
+    @staticmethod
+    def stock_price(stock: str) -> float:
+        return get_stock_price(stock)
+
     def buy_stock(self, username: str, stock: str, amount: float) -> None:
         if amount <= 0:
             raise ServiceException(f"Amount has to be positive. Amount provided: {amount}")
 
-        stock_price = get_stock_price(stock)
+        stock_price = Service.stock_price(stock)
 
         total = stock_price * amount
 
@@ -52,7 +56,7 @@ class Service:
         if amount <= 0:
             raise ServiceException(f"Amount has to be positive. Amount provided: {amount}")
 
-        stock_price = get_stock_price(stock)
+        stock_price = Service.stock_price(stock)
 
         total = stock_price * amount
 

@@ -5,7 +5,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
-from data_models import UserCreate, UserLogin, BuyStockRequest, SellStockRequest, TopUpRequest
+from data_models import UserCreate, UserLogin, BuyStockRequest, SellStockRequest, TopUpRequest, StockPriceRequest
 from database import Database
 from salted_password import SaltedPassword
 from service import Service
@@ -98,6 +98,14 @@ async def topup(topup_request: TopUpRequest, token: str = Depends(oauth2_scheme)
     try:
         service.topup(username, topup_request.amount)
         return {"message": "Operation was successful"}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
+
+
+@app.get("/get_stock_price", status_code=200)
+async def get_stock_price(stock_request: StockPriceRequest):
+    try:
+        return {"stock_price": Service.stock_price(stock_request.stock)}
     except Exception as e:
         raise HTTPException(status_code=403, detail=f"Exception: {e}")
 
