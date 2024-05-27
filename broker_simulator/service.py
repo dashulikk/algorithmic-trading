@@ -1,8 +1,8 @@
+from custom_exceptions import ServiceException
 from stock_info import get_stock_price
 from database import Database
 
 
-# TODO: Raise Exceptions instead of just returning None
 class Service:
     def __init__(self, db: Database):
         self.db = db
@@ -10,14 +10,14 @@ class Service:
     def user_exists(self, username: str) -> bool:
         return self.db.user_exists(username)
 
-    def get_user_password_and_salt(self, username: str) -> tuple[str, str] | None:
+    def get_user_password_and_salt(self, username: str) -> tuple[str, str]:
         query_result = self.db.get_user_password_and_salt(username)
         return query_result[0][0], query_result[0][1]
 
     def create_user(self, username: str, hashed_password_hex: str, salt_hex: str) -> None:
         self.db.create_user(username, hashed_password_hex, salt_hex)
 
-    def delete_user(self, username: str) -> None:
+    def delete_user(self, username: str):
         self.db.delete_user(username)
 
     def get_balance(self, username: str) -> float:
@@ -26,7 +26,7 @@ class Service:
 
     def topup(self, username: str, amount: float) -> None:
         if amount <= 0:
-            return None
+            raise ServiceException(f"Amount has to be positive. Amount provided: {amount}")
 
         self.db.topup(username, amount)
 
@@ -37,9 +37,9 @@ class Service:
     def _calculate_fee(total: float) -> float:
         return total * 0.001  # 0.1% of the total
 
-    def buy_stock(self, username: str, stock: str, amount: float) -> bool | None:
+    def buy_stock(self, username: str, stock: str, amount: float) -> None:
         if amount <= 0:
-            return False
+            raise ServiceException(f"Amount has to be positive. Amount provided: {amount}")
 
         stock_price = get_stock_price(stock)
 
@@ -49,8 +49,8 @@ class Service:
         self.db.buy_stock(username, stock, amount, total, fee)
 
     def sell_stock(self, username: str, stock: str, amount: float) -> bool:
-        if not self.user_exists(username) or amount <= 0:
-            return False
+        if amount <= 0:
+            raise ServiceException(f"Amount has to be positive. Amount provided: {amount}")
 
         stock_price = get_stock_price(stock)
 

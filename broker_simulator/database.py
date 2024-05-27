@@ -4,6 +4,7 @@ import sys
 import psycopg2
 from dotenv import load_dotenv
 
+from custom_exceptions import DBException
 from data_models import Order
 
 load_dotenv()  # load .env variables
@@ -56,9 +57,9 @@ class Database:
 
         return exists
 
-    def get_user_password_and_salt(self, username: str) -> tuple[str, str] | None:
+    def get_user_password_and_salt(self, username: str) -> tuple[str, str]:
         if not self.user_exists(username):
-            return None
+            raise DBException("User doesn't exist")
 
         # Prepare the SQL query using parameterized statements for safety
         query = "SELECT password_hash, salt FROM users WHERE username = %s;"
@@ -72,29 +73,40 @@ class Database:
         return query_result
 
     def create_user(self, username: str, hashed_password_hex: str, salt_hex: str) -> None:
-        # Execute the prepared statement with provided parameters
-        self.cursor.execute("EXECUTE insert_user_plan (%s, %s, %s)", (username, hashed_password_hex, salt_hex))
-        self.cursor.execute("EXECUTE insert_user_balance_plan (%s)", (username,))
+        if self.user_exists(username):
+            raise DBException("This user already exists")
 
-        self.conn.commit()
+        try:
+            # Execute the prepared statement with provided parameters
+            self.cursor.execute("EXECUTE insert_user_plan (%s, %s, %s)", (username, hashed_password_hex, salt_hex))
+            self.cursor.execute("EXECUTE insert_user_balance_plan (%s)", (username,))
+
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise DBException(f"Operation failed: {e}")
 
     def delete_user(self, username: str) -> None:
         if not self.user_exists(username):
-            return None
+            raise DBException("This user doesn't exist")
 
-        delete_from_users_query = "DELETE FROM users WHERE username = %s;"
-        delete_from_balance_query = "DELETE FROM users_balance WHERE username = %s;"
-        delete_from_stocks_query = "DELETE FROM users_stocks WHERE username = %s;"
+        try:
+            delete_from_users_query = "DELETE FROM users WHERE username = %s;"
+            delete_from_balance_query = "DELETE FROM users_balance WHERE username = %s;"
+            delete_from_stocks_query = "DELETE FROM users_stocks WHERE username = %s;"
 
-        self.cursor.execute(delete_from_users_query, (username,))
-        self.cursor.execute(delete_from_balance_query, (username,))
-        self.cursor.execute(delete_from_stocks_query, (username,))
+            self.cursor.execute(delete_from_users_query, (username,))
+            self.cursor.execute(delete_from_balance_query, (username,))
+            self.cursor.execute(delete_from_stocks_query, (username,))
 
-        self.conn.commit()
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise DBException(f"Operation failed: {e}")
 
-    def get_balance(self, username: str) -> list[tuple[any, any]] | None:
+    def get_balance(self, username: str) -> list[tuple[any, any]]:
         if not self.user_exists(username):
-            return None
+            raise DBException("This user doesn't exist")
 
         query = "SELECT balance FROM users_balance WHERE username = %s;"
 
@@ -108,18 +120,19 @@ class Database:
 
     def topup(self, username: str, amount: float) -> None:
         if not self.user_exists(username):
-            return None
+            raise DBException("This user doesn't exist")
 
-        balance = self.get_balance(username)
-        query = "UPDATE users_balance SET balance = balance + %s WHERE username = %s;"
+        try:
+            query = "UPDATE users_balance SET balance = balance + %s WHERE username = %s;"
+            self.cursor.execute(query, (amount, username))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise DBException(f"Operation failed: {e}")
 
-        self.cursor.execute(query, (amount, username))
-
-        self.conn.commit()
-
-    def get_portfolio(self, username: str) -> dict[str, float] | None:
+    def get_portfolio(self, username: str) -> dict[str, float]:
         if not self.user_exists(username):
-            return None
+            raise DBException("This user doesn't exist")
 
         stocks: dict[str, float] = {}
 
@@ -132,9 +145,9 @@ class Database:
 
         return stocks
 
-    def buy_stock(self, username: str, stock: str, amount: float, total: float, fee: float) -> bool | None:
+    def buy_stock(self, username: str, stock: str, amount: float, total: float, fee: float) -> None:
         if not self.user_exists(username):
-            return False
+            raise DBException("This user doesn't exist")
 
         try:
             query_balance_subtract = "UPDATE users_balance SET balance = balance - (%s + %s) WHERE username = %s;"
@@ -149,20 +162,19 @@ class Database:
             self.cursor.execute(query_stock_buy, (amount, username, stock))
 
             self.conn.commit()
-
-            return True
         except Exception as e:
             self.conn.rollback()
-            return False
 
-    def sell_stock(self, username: str, stock: str, amount: float, total: float, fee: float) -> bool:
+            raise DBException(f"Operation failed: {e}")
+
+    def sell_stock(self, username: str, stock: str, amount: float, total: float, fee: float) -> None:
         if not self.user_exists(username):
-            return False
+            raise DBException("This user doesn't exist")
 
         user_stocks = self.get_portfolio(username)
 
         if stock not in user_stocks:
-            return False
+            raise DBException("User doesn't own this stock")
 
         try:
             query_balance_subtract = "UPDATE users_balance SET balance = balance + (%s - %s) WHERE username = %s;"
@@ -175,28 +187,23 @@ class Database:
             self.cursor.execute(query_remove_stock_if_zero, (username, stock))
 
             self.conn.commit()
-
-            return True
         except Exception as e:
             self.conn.rollback()
-            print(e)
-            return False
+            raise DBException(f"Operation failed: {e}")
 
     def submit_order(self, username: str, order_type: str, stock: str, amount: float, trigger_price: str):
         if not self.user_exists(username):
-            return False
+            raise DBException("This user doesn't exist")
 
         try:
             query_create_stock_entry = "INSERT INTO users_orders VALUES (%s, %s, %s, %s, %s);"
             self.cursor.execute(query_create_stock_entry, (username, stock, order_type, trigger_price, amount))
             self.conn.commit()
-
-            return True
         except Exception as e:
             self.conn.rollback()
-            return False
+            raise DBException(f"Operation failed: {e}")
 
-    def get_all_orders(self) -> list[Order] | None:
+    def get_all_orders(self) -> list[Order]:
         try:
             # Preparing the SQL query to select all rows from the users_orders table
             query = "SELECT * FROM users_orders;"
@@ -213,8 +220,7 @@ class Database:
 
             return orders
         except Exception as e:
-            print(f"An error occurred while fetching orders: {e}")
-            return None
+            raise DBException(f"Operation failed: {e}")
 
     def __del__(self):
         self.cursor.close()

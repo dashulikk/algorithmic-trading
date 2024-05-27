@@ -1,5 +1,3 @@
-# TODO: return errors
-
 import os
 
 from dotenv import load_dotenv
@@ -46,32 +44,37 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @app.post("/create_user", status_code=200)
 async def create_user(user: UserCreate):
-    if not service.user_exists(user.username):
+    try:
         password_object = SaltedPassword(user.password)
         service.create_user(user.username, password_object.password_hash, password_object.salt)
         return {"message": "User created successfully"}
-    else:
-        raise HTTPException(status_code=409, detail="This user already exists")
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
 
 
 @app.post("/delete_user", status_code=200)
 async def delete_user(username: str = Depends(get_current_user)):
-    if service.user_exists(username):
+    if username is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    try:
         service.delete_user(username)
         return {"message": "User deleted successfully"}
-    raise HTTPException(status_code=401, detail="User already deleted")
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
 
 
 @app.post("/login", status_code=200)
 async def login(user: UserLogin):
     username = user.username
     password = user.password
-    if service.user_exists(username):
+    try:
         stored_password_hash, salt = service.get_user_password_and_salt(username)
         if SaltedPassword.check_password(password, stored_password_hash, salt):
             access_token = create_access_token(data={"sub": username})
             return {"access_token": access_token, "token_type": "bearer"}
-    raise HTTPException(status_code=401, detail="Bad username or password")
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
 
 
 @app.get("/get_balance", status_code=200)
@@ -80,7 +83,10 @@ async def get_balance(token: str = Depends(oauth2_scheme)):
     if username is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    return {"balance": f"{service.get_balance(username)}"}
+    try:
+        return {"balance": f"{service.get_balance(username)}"}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
 
 
 @app.put("/topup", status_code=200)
@@ -89,7 +95,11 @@ async def topup(topup_request: TopUpRequest, token: str = Depends(oauth2_scheme)
     if username is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    service.topup(username, topup_request.amount)
+    try:
+        service.topup(username, topup_request.amount)
+        return {"message": "Operation was successful"}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
 
 
 @app.put("/buy", status_code=200)
@@ -98,7 +108,11 @@ async def buy_stock(buy_stock_request: BuyStockRequest, token: str = Depends(oau
     if username is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    service.buy_stock(username, buy_stock_request.stock, buy_stock_request.amount)
+    try:
+        service.buy_stock(username, buy_stock_request.stock, buy_stock_request.amount)
+        return {"message": "Operation was successful"}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
 
 
 @app.put("/sell", status_code=200)
@@ -107,4 +121,8 @@ async def buy_stock(sell_stock_request: SellStockRequest, token: str = Depends(o
     if username is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    service.sell_stock(username, sell_stock_request.stock, sell_stock_request.amount)
+    try:
+        service.sell_stock(username, sell_stock_request.stock, sell_stock_request.amount)
+        return {"message": "Operation was successful"}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
