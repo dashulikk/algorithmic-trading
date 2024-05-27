@@ -52,7 +52,7 @@ class Service:
         fee = self._calculate_fee(total)
         self.db.buy_stock(username, stock, amount, total, fee)
 
-    def sell_stock(self, username: str, stock: str, amount: float) -> bool:
+    def sell_stock(self, username: str, stock: str, amount: float) -> None:
         if amount <= 0:
             raise ServiceException(f"Amount has to be positive. Amount provided: {amount}")
 
@@ -62,6 +62,16 @@ class Service:
 
         fee = self._calculate_fee(total)
         self.db.sell_stock(username, stock, amount, total, fee)
+
+    def get_net_worth(self, username: str) -> float:
+        cash = self.get_balance(username)
+        portfolio = self.get_portfolio(username)
+
+        net_worth = cash
+        for stock, amount in portfolio.items():
+            net_worth += Service.stock_price(stock) * amount
+
+        return net_worth
 
     def submit_order(self, username: str, order_type: str, stock: str, amount: float, trigger_price: str):
         self.db.submit_order(username, order_type, stock, amount, trigger_price)

@@ -135,6 +135,7 @@ async def buy_stock(sell_stock_request: SellStockRequest, token: str = Depends(o
     except Exception as e:
         raise HTTPException(status_code=403, detail=f"Exception: {e}")
 
+
 @app.get("/get_portfolio", status_code=200)
 async def get_portfolio(token: str = Depends(oauth2_scheme)):
     username: str = get_current_user(token)
@@ -148,3 +149,14 @@ async def get_portfolio(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=403, detail=f"Exception: {e}")
 
 
+@app.get("/get_net_worth", status_code=200)
+async def get_net_worth(token: str = Depends(oauth2_scheme)):
+    username: str = get_current_user(token)
+    if username is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    try:
+        net_worth = service.get_net_worth(username)
+        return {"net_worth": f"{net_worth}"}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Exception: {e}")
