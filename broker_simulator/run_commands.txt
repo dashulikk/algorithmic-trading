@@ -1,0 +1,12 @@
+nohup python3 order_processor.py > /dev/null 2>&1 &
+nohup uvicorn app:app --reload --port 5000 > /dev/null 2>&1 &
+
+# this returns process id of first process (order processor) -> pid1
+# and second process (app.py) -> pid2
+
+# > /dev/null 2>&1 & -> in order to omit printing out details in the file
+
+...
+
+kill pid1
+kill pid2
