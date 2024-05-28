@@ -1,0 +1,9 @@
+nohup python3 -m trading_bots.transaction_cost_trading_bot.py > /dev/null 2>&1 &
+nohup python3 -m trading_bots.magnificent_seven_trading_bot.py > /dev/null 2>&1 &
+
+# > /dev/null 2>&1 & -> in order to omit printing out details in the file
+
+...
+
+kill pid1
+kill pid2

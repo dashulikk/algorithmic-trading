@@ -9,7 +9,7 @@ class TransactionCostTradingBot(BaseTradingBot):
     def __init__(self, username: str, password: str, log_filename: str):
         super().__init__(username, password, log_filename)
         self.topup(1_000)
-        self.log(30)
+        self.log(1)
 
     def run(self):
         for _ in range(TransactionCostTradingBot.num_transactions):
