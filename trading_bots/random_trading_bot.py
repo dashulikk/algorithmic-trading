@@ -16,7 +16,7 @@ class RandomTradingBot(BaseTradingBot):
 
         self.topup(1_000)
 
-        # log every 10 seconds
+        # log every 100 seconds
         self.log(100)
 
     def run(self):

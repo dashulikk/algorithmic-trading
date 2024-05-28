@@ -18,3 +18,5 @@ def analyze_logs(filename, save_location):
 
 #analyze_logs('../logs/transaction_cost_bot.txt', 'transaction_cost.png')
 #analyze_logs('../logs/no_transaction_cost_bot.txt', 'no_transaction_cost.png')
+#analyze_logs('../logs/random_bot.txt', 'random_bot.png')
+#analyze_logs('../logs/magnificent_seven_bot.txt', 'magnificent_seven_bot.png')
